@@ -1,0 +1,7 @@
+---
+- apt: name=rabbitmq-server state=latest
+       update_cache=yes cache_valid_time={{ apt_cache_time }}
+- copy: src=empty dest=/etc/rabbitmq/.update_guest_flag
+        owner=root group=root mode=0400
+  notify:
+    - recreate guest user

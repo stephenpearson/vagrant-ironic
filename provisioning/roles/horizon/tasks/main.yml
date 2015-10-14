@@ -1,0 +1,15 @@
+---
+- apt: name={{ item }} state=latest
+       update_cache=yes cache_valid_time={{ apt_cache_time }}
+  with_items:
+    - openstack-dashboard
+  notify:
+    - restart apache2
+    - restart memcached
+- apt: name=openstack-dashboard-ubuntu-theme state=absent
+- template: src=local_settings.py
+            dest=/etc/openstack-dashboard/local_settings.py
+            owner=root group=root mode=0644
+  notify:
+    - restart apache2
+    - restart memcached

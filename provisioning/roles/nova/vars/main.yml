@@ -1,0 +1,9 @@
+---
+apt_cache_time: 21600
+rabbitmq_guest_password: password123
+nova_sql_password: password123
+keystone_admin_password: password123
+keystone_nova_password: password123
+keystone_neutron_password: password123
+metadata_secret: password123
+keystone_ironic_password: password123

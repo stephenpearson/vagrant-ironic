@@ -1,0 +1,14 @@
+---
+apt_cache_time: 21600
+rabbitmq_guest_password: password123
+neutron_sql_password: password123
+keystone_admin_password: password123
+keystone_neutron_password: password123
+metadata_secret: password123
+keystone_demo_password: password123
+external_bridge_network: "172.16.180.0/24"
+external_bridge_address: "172.16.180.9"
+external_bridge_netmask: "255.255.255.0"
+external_bridge_gateway: "172.16.180.2"
+external_bridge_dhcp_start: "172.16.180.32"
+external_bridge_dhcp_end: "172.16.180.254"

@@ -1,0 +1,7 @@
+---
+- name: keystone db sync
+  shell: su -s /bin/sh -c "keystone-manage db_sync" keystone
+- name: restart keystone
+  service: name=keystone state=restarted
+- name: restart apache
+  service: name=apache2 state=restarted

@@ -1,0 +1,87 @@
+---
+- mysql_db: name=ironic state=present
+- mysql_user: name=ironic
+              password={{ ironic_sql_password }}
+              priv=ironic.*:ALL,GRANT
+              host={{ item }}
+  with_items:
+    - "{{ ansible_default_ipv4.address }}"
+    - "{{ ansible_hostname }}"
+    - localhost
+    - 127.0.0.1
+    - ::1
+- keystone_user: >
+    user=ironic email=ironic@example.com
+    tenant=service
+    password={{ keystone_ironic_password }}
+    login_user=admin login_tenant_name=admin
+    login_password={{ keystone_admin_password }}
+- keystone_user: >
+    role=admin user=ironic tenant=service
+    login_user=admin login_tenant_name=admin
+    login_password={{ keystone_admin_password }}
+- keystone_service: >
+    name=ironic type=baremetal
+    description="OpenStack Bare Metal Provisioning Service"
+    public_url="http://{{ ansible_default_ipv4.address }}:6385"
+    internal_url="http://{{ ansible_default_ipv4.address }}:6385"
+    admin_url="http://{{ ansible_default_ipv4.address }}:6385"
+    login_user=admin tenant_name=admin
+    login_password={{ keystone_admin_password }}
+    region=regionOne
+- apt: name={{ item }} state=latest
+       update_cache=yes cache_valid_time={{ apt_cache_time }}
+  with_items:
+    - ironic-api
+    - ironic-conductor
+    - python-ironicclient
+- get_url: 
+    url={{ pymysql_package_url }} dest=/tmp/python-pymysql.deb
+  notify:
+  - install python-pymysql
+- meta: flush_handlers
+- file: path=/var/log/ironic/ironic-dbsync.log state=touch
+        owner=ironic group=ironic mode=0644
+- template: src=ironic.conf dest=/etc/ironic/ironic.conf
+            owner=ironic group=ironic mode=0644
+  notify:
+  - restart ironic api
+  - restart ironic conductor
+- copy: src=empty dest=/etc/ironic/db_sync_flag
+         owner=root group=root mode=0400
+  notify:
+  - ironic db sync
+  - restart ironic api
+  - restart ironic conductor
+- meta: flush_handlers
+- wait_for: port=6385
+- glance_image: >
+    auth_url=http://{{ ansible_default_ipv4.address }}:35357/v2.0
+    login_username=admin
+    login_password={{ keystone_admin_password }}
+    login_tenant_name=admin
+    name="{{ deploy_kernel_name }}" 
+    container_format=aki
+    disk_format=aki
+    state=present
+    copy_from="{{ deploy_kernel_url }}" 
+    is_public=yes
+    region_name=regionOne
+- glance_image: >
+    auth_url=http://{{ ansible_default_ipv4.address }}:35357/v2.0
+    login_username=admin
+    login_password={{ keystone_admin_password }}
+    login_tenant_name=admin
+    name="{{ deploy_initrd_name }}" 
+    container_format=ari
+    disk_format=ari
+    state=present
+    copy_from="{{ deploy_initrd_url }}" 
+    is_public=yes
+    region_name=regionOne
+- shell: . /root/admin-openrc.sh && nova flavor-create vbaremetal auto 1024 20 1 && touch /etc/ironic/.flavor-1
+  args:
+    creates: /etc/ironic/.flavor-1
+- shell: . /root/admin-openrc.sh && nova flavor-key vbaremetal set cpu_arch=x86_64 && touch /etc/ironic/.flavor-2
+  args:
+    creates: /etc/ironic/.flavor-2

@@ -1,0 +1,10 @@
+---
+- hosts: all
+  sudo: true
+  roles:
+  - keystone
+  - glance
+  - nova
+  - neutron
+  - ironic
+  - horizon

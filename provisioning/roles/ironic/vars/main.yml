@@ -1,0 +1,9 @@
+---
+ironic_sql_password: password123
+keystone_admin_password: password123
+keystone_ironic_password: password123
+pymysql_package_url: http://launchpadlibrarian.net/193681635/python-pymysql_0.6.2-1_all.deb
+deploy_kernel_name: "Deploy Kernel"
+deploy_kernel_url: "http://tarballs.openstack.org/ironic-python-agent/coreos/files/coreos_production_pxe.vmlinuz"
+deploy_initrd_name: "Deploy Initrd"
+deploy_initrd_url: "http://tarballs.openstack.org/ironic-python-agent/coreos/files/coreos_production_pxe_image-oem.cpio.gz"

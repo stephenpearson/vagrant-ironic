@@ -1,0 +1,9 @@
+---
+- name: recreate guest user
+  rabbitmq_user: user=guest
+                 password={{ rabbitmq_guest_password }}
+                 force=yes
+                 configure_priv=.*
+                 read_priv=.*
+                 write_priv=.*
+                 state=present

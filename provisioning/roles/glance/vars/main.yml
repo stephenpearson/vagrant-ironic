@@ -1,0 +1,7 @@
+---
+apt_cache_time: 21600
+glance_sql_password: password123
+keystone_admin_password: password123
+keystone_glance_password: password123
+cirros_image_name: "cirros-0.3.4-x86_64"
+cirros_image_url: "http://download.cirros-cloud.net/0.3.4/cirros-0.3.4-x86_64-disk.img"

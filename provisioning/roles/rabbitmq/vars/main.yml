@@ -1,0 +1,3 @@
+---
+apt_cache_time: 21600
+rabbitmq_guest_password: password123

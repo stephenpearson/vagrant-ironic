@@ -1,0 +1,18 @@
+---
+- apt: name={{ item }} state=latest
+       update_cache=yes cache_valid_time={{ apt_cache_time }}
+  with_items:
+    - mariadb-server
+    - python-mysqldb
+- copy: src=empty dest=/etc/mysql/set_root_password_flag
+        owner=root group=root mode=0400
+  notify: set mysql password
+- template: src=my.cnf dest=/etc/mysql/my.cnf
+            owner=root group=root mode=0644
+  notify: restart mysql
+- meta: flush_handlers
+- mysql_user: user="" host="{{ ansible_hostname }}" state="absent"
+- mysql_user: user="" state="absent"
+- mysql_db: db=test state=absent
+- apt: name=python-mysqldb state=latest
+       update_cache=yes cache_valid_time={{ apt_cache_time }}

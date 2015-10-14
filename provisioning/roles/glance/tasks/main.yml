@@ -1,0 +1,70 @@
+---
+- mysql_db: name=glance state=present
+- mysql_user: name=glance
+              password={{ glance_sql_password }}
+              priv=glance.*:ALL,GRANT
+              host={{ item }}
+  with_items:
+    - "{{ ansible_default_ipv4.address }}"
+    - "{{ ansible_hostname }}"
+    - localhost
+    - 127.0.0.1
+    - ::1
+- keystone_user: >
+    user=glance email=glance@example.com
+    tenant=service
+    password={{ keystone_glance_password }}
+    login_user=admin login_tenant_name=admin
+    login_password={{ keystone_admin_password }}
+- keystone_user: >
+    role=admin user=glance tenant=service
+    login_user=admin login_tenant_name=admin
+    login_password={{ keystone_admin_password }}
+- keystone_service: >
+    name=glance type=image
+    description="OpenStack Image Service"
+    public_url="http://{{ ansible_default_ipv4.address }}:9292"
+    internal_url="http://{{ ansible_default_ipv4.address }}:9292"
+    admin_url="http://{{ ansible_default_ipv4.address }}:9292"
+    login_user=admin tenant_name=admin
+    login_password={{ keystone_admin_password }}
+    region=regionOne
+- apt: name={{ item }} state=latest
+       update_cache=yes cache_valid_time={{ apt_cache_time }}
+  with_items:
+    - glance
+    - python-glanceclient
+  notify:
+    - glance db sync
+- template: src=glance-api.conf dest=/etc/glance/glance-api.conf
+            owner=glance group=glance mode=0644
+  notify:
+  - restart glance registry
+  - restart glance api
+- template: src=glance-registry.conf dest=/etc/glance/glance-registry.conf
+            owner=glance group=glance mode=0644
+  notify:
+  - restart glance registry
+  - restart glance api
+- copy: src=empty dest=/etc/glance/db_sync_flag
+        owner=root group=root mode=0400
+  notify:
+  - glance db sync
+  - restart glance registry
+  - restart glance api
+- file: path=/var/lib/glance/glance.sqlite state=absent
+- meta: flush_handlers
+- wait_for: port=9191
+- wait_for: port=9292
+- glance_image: >
+    auth_url=http://{{ ansible_default_ipv4.address }}:35357/v2.0
+    login_username=admin
+    login_password={{ keystone_admin_password }}
+    login_tenant_name=admin
+    name="{{ cirros_image_name }}"
+    container_format=bare
+    disk_format=qcow2
+    state=present
+    copy_from="{{ cirros_image_url }}"
+    is_public=yes
+    region_name=regionOne

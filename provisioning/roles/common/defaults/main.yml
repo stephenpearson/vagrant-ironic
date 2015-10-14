@@ -1,0 +1,7 @@
+---
+timezone: Etc/UTC
+repository: >
+  deb
+  http://ubuntu-cloud.archive.canonical.com/ubuntu
+  trusty-updates/kilo
+  main

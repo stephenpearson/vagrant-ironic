@@ -1,0 +1,10 @@
+---
+galaxy_info:
+  author: Stephen Pearson
+  description: Sets up Keystone
+  license: license (GPLv2, CC-BY, etc)
+  min_ansible_version: 1.2
+dependencies:
+  - common
+  - database
+  - rabbitmq

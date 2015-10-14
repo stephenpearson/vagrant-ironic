@@ -1,0 +1,13 @@
+---
+- name: restart mysql
+  service: name=mysql state=restarted
+- name: set mysql password
+  mysql_user: login_user=root login_password='' name=root
+              password={{ mysql_root_password }}
+              priv=*.*:ALL,GRANT
+              host={{ item }}
+  with_items:
+    - "{{ ansible_default_ipv4.address }}"
+    - "{{ ansible_hostname }}"
+    - 127.0.0.1
+    - ::1

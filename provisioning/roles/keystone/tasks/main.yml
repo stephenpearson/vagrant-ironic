@@ -1,0 +1,85 @@
+---
+- copy: src=keystone.override dest=/etc/init/keystone.override
+        owner=root group=root mode=0644
+- mysql_db: name=keystone state=present
+- mysql_user: name=keystone
+              password={{ keystone_sql_password }}
+              priv=keystone.*:ALL,GRANT
+              host={{ item }}
+  with_items:
+    - "{{ ansible_default_ipv4.address }}"
+    - "{{ ansible_hostname }}"
+    - localhost
+    - 127.0.0.1
+    - ::1
+- apt: name={{ item }} state=latest
+       update_cache=yes cache_valid_time={{ apt_cache_time }}
+  with_items:
+    - keystone
+    - python-openstackclient
+    - apache2
+    - libapache2-mod-wsgi
+    - memcached
+    - python-memcache
+  notify:
+  - keystone db sync
+- service: name=keystone state=stopped enabled=no
+- template: src=keystone.conf dest=/etc/keystone/keystone.conf
+            owner=root group=root mode=0644
+- copy: src=empty dest=/etc/keystone/db_sync_flag
+        owner=root group=root mode=0400
+  notify:
+  - keystone db sync
+- service: name=apache2 state=started enabled=yes
+- meta: flush_handlers
+- template: src=wsgi-keystone.conf
+            dest=/etc/apache2/sites-available/wsgi-keystone.conf
+            owner=root group=root mode=0644
+  notify:
+  - restart apache
+- file: path=/etc/apache2/sites-enabled/000-default.conf state=absent
+- file: src=/etc/apache2/sites-available/wsgi-keystone.conf
+        dest=/etc/apache2/sites-enabled/wsgi-keystone.conf
+        state=link
+- file: path=/var/www/cgi-bin/keystone state=directory
+        owner=keystone group=keystone mode=0755
+- copy: src=wsgi dest=/var/www/cgi-bin/keystone/{{ item }}
+        owner=keystone group=keystone mode=0755
+  with_items:
+  - main
+  - admin
+  notify:
+  - restart apache
+- meta: flush_handlers
+- wait_for: port=35357
+- wait_for: port=5000
+- keystone_user: tenant=admin tenant_description="Admin Tenant"
+                 token={{ keystone_admin_token }}
+- keystone_user: user=admin email=admin@example.com
+                 tenant=admin
+                 password={{ keystone_admin_password }}
+                 token={{ keystone_admin_token }}
+- keystone_user: role=admin user=admin tenant=admin
+                 token={{ keystone_admin_token }}
+- keystone_user: tenant=demo tenant_description="Demo Tenant"
+                 token={{ keystone_admin_token }}
+- keystone_user: user=demo email=demo@example.com
+                 tenant=demo
+                 password={{ keystone_demo_password }}
+                 token={{ keystone_admin_token }}
+- keystone_user: tenant=service tenant_description="Service Tenant"
+                 token={{ keystone_admin_token }}
+  register: service_tenant
+- keystone_service: name=keystone type=identity
+         description="Identity Service"
+         public_url="http://{{ ansible_default_ipv4.address }}:5000/v2.0"
+         internal_url="http://{{ ansible_default_ipv4.address }}:5000/v2.0"
+         admin_url="http://{{ ansible_default_ipv4.address }}:35357/v2.0"
+         region=regionOne
+         token={{ keystone_admin_token }}
+- template: src={{ item }}-openrc.sh dest=/root/{{ item }}-openrc.sh
+            owner=root group=root mode=0755
+  with_items:
+    - admin
+    - demo
+- file: path=/var/lib/keystone/keystone.db state=absent

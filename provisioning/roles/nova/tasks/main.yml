@@ -1,0 +1,86 @@
+---
+# Compute controller
+- mysql_db: name=nova state=present
+- mysql_user: name=nova
+              password={{ nova_sql_password }}
+              priv=nova.*:ALL,GRANT
+              host={{ item }}
+  with_items:
+    - "{{ ansible_default_ipv4.address }}"
+    - "{{ ansible_hostname }}"
+    - localhost
+    - 127.0.0.1
+    - ::1
+- keystone_user: >
+    user=nova email=nova@example.com
+    tenant=service
+    password={{ keystone_nova_password }}
+    login_user=admin login_tenant_name=admin
+    login_password={{ keystone_admin_password }}
+- keystone_user: >
+    role=admin user=nova tenant=service
+    login_user=admin login_tenant_name=admin
+    login_password={{ keystone_admin_password }}
+- keystone_service: >
+    name=nova type=compute
+    description="OpenStack Compute Service"
+    public_url="http://{{ ansible_default_ipv4.address }}:8774/v2/$(tenant_id)s"
+    internal_url="http://{{ ansible_default_ipv4.address }}:8774/v2/$(tenant_id)s"
+    admin_url="http://{{ ansible_default_ipv4.address }}:8774/v2/$(tenant_id)s"
+    endpoint="http://{{ ansible_default_ipv4.address }}:35357/v2.0"
+    login_user=admin tenant_name=admin
+    login_password={{ keystone_admin_password }}
+    region=regionOne
+- apt: name={{ item }} state=latest
+       update_cache=yes cache_valid_time={{ apt_cache_time }}
+  with_items:
+    - nova-api
+    - nova-cert
+    - nova-conductor
+    - nova-consoleauth
+    - nova-novncproxy
+    - nova-scheduler
+    - python-novaclient
+    - nova-compute
+    - sysfsutils
+  notify:
+  - nova db sync
+  - restart nova api
+  - restart nova cert
+  - restart nova consoleauth
+  - restart nova scheduler
+  - restart nova conductor
+  - restart nova novncproxy
+  - restart nova compute
+- copy: src=empty dest=/etc/nova/db_sync_flag
+        owner=root group=root mode=0400
+  notify:
+  - nova db sync
+  - restart nova api
+  - restart nova cert
+  - restart nova consoleauth
+  - restart nova scheduler
+  - restart nova conductor
+  - restart nova novncproxy
+  - restart nova compute
+- template: src=nova.conf dest=/etc/nova/nova.conf
+            owner=nova group=nova mode=0640
+  notify:
+  - restart nova api
+  - restart nova cert
+  - restart nova consoleauth
+  - restart nova scheduler
+  - restart nova conductor
+  - restart nova novncproxy
+  - restart nova compute
+- file: path=/var/lib/nova/nova.sqlite state=absent
+- meta: flush_handlers
+- service: name={{ item }} state=started enabled=yes
+  with_items:
+    - nova-api
+    - nova-cert
+    - nova-compute
+    - nova-conductor
+    - nova-consoleauth
+    - nova-novncproxy
+    - nova-scheduler
